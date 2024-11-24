@@ -19,6 +19,7 @@ from urllib3.util.retry import Retry
 from flask import Flask, jsonify, request
 import numpy as np
 import math
+from flask import Flask, jsonify
 import requests
 
 app = Flask(__name__)
@@ -26,16 +27,17 @@ app = Flask(__name__)
 @app.route('/run_dead_reckoning', methods=['POST'])
 def run_dead_reckoning():
     try:
-        steps = np.max(cACC.compute(display_graph=0, without_mean=1))
+        # Trigger your existing script's functionality here
+        steps = np.max(cACC.compute(display_graph=0, without_mean=1))  # example call
         dist = steps * 0.69
         make_target_with_image(steps, dist, display_steps=1, display_direction=0, display_stepsNumber=0)
+        
         return jsonify({"status": "success", "message": "Dead Reckoning script executed successfully!"}), 200
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
-
 DATA_PATH = 'C:/kafka_python/.venv/DeadReckoning/.venv/data/' #'./data/'
 GRAPH_PATH = 'C:/kafka_python/.venv/DeadReckoning/.venv/graphs/'
 
@@ -126,6 +128,7 @@ phone_mag_filtered = np.array([lp.butter_lowpass_filter(mag_data["mag_x"], cutof
 
 # Timestamp for Magnetometer
 timestamp = mag_data["mag_time"]
+trolley_id = accel_data["trolley_id"]
 
 pitch = gyro_data["x"]
 roll  = gyro_data["y"]
@@ -385,7 +388,7 @@ def save_coord(steps_data, trolley_id):
         print(f"Request failed: {e}")
 
 
-def calculate_steps_and_save(data_angles, x0=0, y0=0, r=1.5, trolley_id="1"): #STATIC TROLLEY_ID
+def calculate_steps_and_save(data_angles, x0=0, y0=0, r=1.5, trolley_id = trolley_id): 
     
     coordinates = []
     coordinates.append({'timestamp': time.time(), 'x': x0, 'y': y0, 'trolley_id': trolley_id}) 
@@ -410,7 +413,7 @@ def make_target_with_image(nbr_steps, distance_traveled, display_steps=1, displa
     Hx, Hy = compute_avg(Hx, Hy, nbr_steps)
     dataCompass = compute_compass(Hx, Hy)
     dataCompass2 = compute_compass2(Hx, Hy)
-    calculate_steps_and_save(dataCompass2, x0=0, y0=0, r=1.5, trolley_id="1") #STATIC TROLLEY_ID
+    calculate_steps_and_save(dataCompass2, x0=0, y0=0, r=1.5, trolley_id = trolley_id ) 
     
     '''
     # Draw the arrows and plot the graph over the image
