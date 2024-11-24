@@ -132,7 +132,8 @@ phone_mag_filtered = np.array([lp.butter_lowpass_filter(mag_data["mag_x"], cutof
 
 # Timestamp for Magnetometer
 timestamp = mag_data["mag_time"]
-trolley_id = accel_data["trolley_id"]
+trolley = np.array(accel_data['trolley_id'])
+
 
 pitch = gyro_data["x"]
 roll  = gyro_data["y"]
@@ -346,6 +347,11 @@ import json
 # Set the APEX REST API URL
 POST_URL = "https://apex.oracle.com/pls/apex/isha1/tables/trolleys_log/"  
 
+import numpy as np
+import time
+import requests
+import json
+
 def save_coord(steps_data, trolley_id):
 
     headers = {
@@ -360,14 +366,16 @@ def save_coord(steps_data, trolley_id):
         x = data['x']
         y = data['y']
         timestamp = data['timestamp']
-        steps = int(np.max(cACC.compute(display_graph=0, without_mean=1)))
-        
+        steps = int(np.max(cACC.compute(display_graph=0, without_mean=1)))  
+        trolley_id = data['trolley_id']
+
+        # Ensure numpy types are converted to native Python types
         coordinates.append({
             "x": x,
             "y": y,
             "timestamp": timestamp,
-            "trolley_id": trolley_id,
-            "steps": steps
+            "trolley_id": int(trolley_id),
+            "steps": int(steps)  
         })
 
     payload = {
@@ -392,21 +400,21 @@ def save_coord(steps_data, trolley_id):
         print(f"Request failed: {e}")
 
 
-def calculate_steps_and_save(data_angles, x0=0, y0=0, r=1.5, trolley_id = trolley_id): 
-    
+
+def calculate_steps_and_save(trolley, data_angles, x0=0, y0=0, r=1.5): 
     coordinates = []
-    coordinates.append({'timestamp': time.time(), 'x': x0, 'y': y0, 'trolley_id': trolley_id}) 
-    
+    coordinates.append({'timestamp': time.time(), 'x': x0, 'y': y0, 'trolley_id': trolley[0]})  # assuming trolley is a list/array
+
     # Calculate coordinates for each step and record them
     x, y = x0, y0
     for i in range(len(data_angles)):
         x, y = calculate_new_coordinates(x, y, data_angles[i], r)
-        
+        trolley_id = trolley[i]  # Fetch the trolley_id dynamically for each step
         # Store coordinates for each step
         coordinates.append({'timestamp': time.time(), 'x': x, 'y': y, 'trolley_id': trolley_id})
     
     # Call save_coord function to send coordinates to the API
-    save_coord(coordinates, trolley_id)
+    save_coord(coordinates, trolley)
 
 def calculate_new_coordinates(x, y, angle, r=1):
     return (x + r * math.sin(angle), y + r * math.cos(angle))
@@ -417,7 +425,9 @@ def make_target_with_image(nbr_steps, distance_traveled, display_steps=1, displa
     Hx, Hy = compute_avg(Hx, Hy, nbr_steps)
     dataCompass = compute_compass(Hx, Hy)
     dataCompass2 = compute_compass2(Hx, Hy)
-    calculate_steps_and_save(dataCompass2, x0=0, y0=0, r=1.5, trolley_id = trolley_id ) 
+
+    trolley = np.array(accel_data['trolley_id']) 
+    calculate_steps_and_save(trolley, dataCompass2, x0=0, y0=0, r=1.5)
     
     '''
     # Draw the arrows and plot the graph over the image
