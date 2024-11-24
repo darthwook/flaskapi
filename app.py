@@ -24,7 +24,7 @@ import requests
 
 app = Flask(__name__)
 
-@app.route('/run_dead_reckoning', methods=['POST'])
+@app.route('/', methods=['POST'])
 def run_dead_reckoning():
     try:
         # Trigger your existing script's functionality here
