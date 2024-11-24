@@ -63,9 +63,9 @@ def fetch_db(url):
         return pd.DataFrame()  # Return empty DataFrame on failure
 
 # Oracle APEX REST API URLs
-gyro_url = "https://apex.oracle.com/pls/apex/isha1/tables/gyro/?LIMIT=10"
-accel_url = "https://apex.oracle.com/pls/apex/isha1/tables/accel/?limit=10"
-mag_url = "https://apex.oracle.com/pls/apex/isha1/tables/magneto/?limit=10"
+gyro_url = "https://apex.oracle.com/pls/apex/isha1/tables/gyro"
+accel_url = "https://apex.oracle.com/pls/apex/isha1/tables/accel"
+mag_url = "https://apex.oracle.com/pls/apex/isha1/tables/magneto"
 
 # Fetch data for gyro, accel, and magnetometer
 gyro_data = fetch_db(gyro_url)
@@ -107,6 +107,8 @@ phone_mag_filtered = np.array([lp.butter_lowpass_filter(mag_data["mag_x"], cutof
 
 # Timestamp for Magnetometer
 timestamp = mag_data["mag_time"]
+
+trolley = np.array(accel_data['trolley_id'])
 
 pitch = gyro_data["x"]
 roll  = gyro_data["y"]
@@ -197,8 +199,6 @@ def draw_all_arrows(data_x, data_y, data_angles, r=1):
 def compute_avg(data_x, data_y, steps):
     Hx_avg = []
     Hy_avg = []
-    print('data x: ', data_x)
-    print('steps: ', steps)
     
     if steps <= 0:
         raise ValueError("The number of steps must be greater than zero.")
@@ -221,8 +221,6 @@ def make_graph_points():
     dataCompass2 = compute_compass2(Hx,Hy)
     #dataAcc = pull_data(DATA_PATH,'Accelerometer')[3] 
     dataAcc = fetch_db(accel_url)[3]
-
-    print(dataAcc)
     timestamps = mag_data["time"]
     plt.plot(timestamps, dataAcc, marker='.', label=" steps")
     draw_all_arrows(timestamps, dataAcc, dataCompass2, 0.1)
@@ -320,7 +318,12 @@ import json
 # Set the APEX REST API URL
 POST_URL = "https://apex.oracle.com/pls/apex/isha1/tables/trolleys_log/"  
 
-def save_coord(steps_data, trolley_id):
+import numpy as np
+import time
+import requests
+import json
+
+def save_coord(steps_data):
 
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36",
@@ -334,21 +337,22 @@ def save_coord(steps_data, trolley_id):
         x = data['x']
         y = data['y']
         timestamp = data['timestamp']
-        steps = int(np.max(cACC.compute(display_graph=0, without_mean=1)))
-        
+        steps = int(np.max(cACC.compute(display_graph=0, without_mean=1)))  
+        trolley_id = data['trolley_id']
+
         coordinates.append({
-            "x": x,
-            "y": y,
-            "timestamp": timestamp,
-            "trolley_id": trolley_id,
-            "steps": steps
+            "x": int(x),
+            "y": int(y),
+            "timestamp": int(timestamp),
+            "trolley_id": int(trolley_id),  
+            "steps": int(steps)  
         })
 
     payload = {
         "coordinates": coordinates
     }
 
-    print('Payload:', payload)
+    print('Payload:', json.dumps(payload, indent=2))  
 
     # Send the data as a JSON POST request to the API
     try:
@@ -365,22 +369,21 @@ def save_coord(steps_data, trolley_id):
     except requests.exceptions.RequestException as e:
         print(f"Request failed: {e}")
 
-
-def calculate_steps_and_save(data_angles, x0=0, y0=0, r=1.5, trolley_id="1"): #STATIC TROLLEY_ID
-    
+def calculate_steps_and_save(trolley, data_angles, x0=0, y0=0, r=1.5): 
     coordinates = []
-    coordinates.append({'timestamp': time.time(), 'x': x0, 'y': y0, 'trolley_id': trolley_id}) 
-    
+    coordinates.append({'timestamp': time.time(), 'x': x0, 'y': y0, 'trolley_id': trolley[0]}) 
+
     # Calculate coordinates for each step and record them
     x, y = x0, y0
     for i in range(len(data_angles)):
         x, y = calculate_new_coordinates(x, y, data_angles[i], r)
-        
+        trolley_id = trolley[i] 
         # Store coordinates for each step
         coordinates.append({'timestamp': time.time(), 'x': x, 'y': y, 'trolley_id': trolley_id})
     
     # Call save_coord function to send coordinates to the API
-    save_coord(coordinates, trolley_id)
+    #save_coord(coordinates, trolley)
+    save_coord(coordinates)
 
 def calculate_new_coordinates(x, y, angle, r=1):
     return (x + r * math.sin(angle), y + r * math.cos(angle))
@@ -391,7 +394,10 @@ def make_target_with_image(nbr_steps, distance_traveled, display_steps=1, displa
     Hx, Hy = compute_avg(Hx, Hy, nbr_steps)
     dataCompass = compute_compass(Hx, Hy)
     dataCompass2 = compute_compass2(Hx, Hy)
-    calculate_steps_and_save(dataCompass2, x0=0, y0=0, r=1.5, trolley_id="1") #STATIC TROLLEY_ID
+
+    trolley = np.array(accel_data['trolley_id']) 
+
+    calculate_steps_and_save(trolley, dataCompass2, x0=0, y0=0, r=1.5)
     
     '''
     # Draw the arrows and plot the graph over the image
