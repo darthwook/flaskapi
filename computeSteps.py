@@ -1,6 +1,5 @@
 """
 computing the number of steps from data provided by accelerometer
-comparing the results with real distance from the car provided by GPS
 """
 
 import math
@@ -191,23 +190,10 @@ def compute(display_graph=1, without_mean=0):
     else:
         ZERO = GRAVITY
         
-    #Method 1
     step1, dist1 = compute__peak_accel_threshold(r,timestamps,ZERO) 
     if display_graph == 1: graph__peak_accel_threshold(r,timestamps,ZERO)
-
-    #Method 2
-    step2, dist2, _, _ = compute__jk_threshold(r,timestamps,ZERO) 
-    if display_graph == 1: graph__jk_threshold(r,timestamps,ZERO)
     
-    #Method 3
-    step3, dist3, _, _ = compute__find_peaks(r,timestamps)
-    if display_graph == 1: graph__find_peaks(r,timestamps)
-
-    #Method 4
-    step4, dist4, _, _ = compute__peakdetect(r,timestamps)
-    if display_graph == 1: graph__peakdetect(r,timestamps,1,1/4)
-    
-    return step1 #, step2, step3, step4
+    return step1 
 
 
 
