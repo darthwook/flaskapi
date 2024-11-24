@@ -88,9 +88,9 @@ def fetch_db(url):
         return pd.DataFrame()  # Return empty DataFrame on failure
 
 # Oracle APEX REST API URLs
-gyro_url = "https://apex.oracle.com/pls/apex/isha1/tables/gyro/?LIMIT=10"
-accel_url = "https://apex.oracle.com/pls/apex/isha1/tables/accel/?limit=10"
-mag_url = "https://apex.oracle.com/pls/apex/isha1/tables/magneto/?limit=10"
+gyro_url = "https://apex.oracle.com/pls/apex/isha1/tables/gyro/?limit=1000"
+accel_url = "https://apex.oracle.com/pls/apex/isha1/tables/accel/?limit=1000"
+mag_url = "https://apex.oracle.com/pls/apex/isha1/tables/magneto/?limit=1000"
 
 # Fetch data for gyro, accel, and magnetometer
 gyro_data = fetch_db(gyro_url)
