@@ -22,6 +22,15 @@ import math
 from flask import Flask, jsonify
 import requests
 
+from flask import Flask
+
+app = Flask(__name__)
+
+@app.route("/")
+def index():
+    return "Hello World!"
+
+'''
 app = Flask(__name__)
 
 @app.route('/', methods=['POST'])
@@ -450,4 +459,4 @@ if __name__ == "__main__":
                 display_steps = 1,
                 display_direction = 0,
                 display_stepsNumber = 0)
-    
+    '''
