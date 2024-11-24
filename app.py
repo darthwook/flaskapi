@@ -35,9 +35,13 @@ def run_dead_reckoning():
         return jsonify({"status": "success", "message": "Dead Reckoning script executed successfully!"}), 200
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
+        
+import os
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))  # Default to 5000 if $PORT is not set
+    app.run(host="0.0.0.0", port=port, debug=True)
+    
 
-if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
 DATA_PATH = 'C:/kafka_python/.venv/DeadReckoning/.venv/data/' #'./data/'
 GRAPH_PATH = 'C:/kafka_python/.venv/DeadReckoning/.venv/graphs/'
 
