@@ -38,8 +38,10 @@ def run_dead_reckoning():
                                display_direction=0,
                                display_stepsNumber=0)
         
-        return jsonify({'status': 'success'}), 200
+        return jsonify({'status': 'success', 'message': 'Dead reckoning started successfully.'}), 200
+
     except Exception as e:
+        # Handle errors and return valid JSON response
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 if __name__ == "__main__":
