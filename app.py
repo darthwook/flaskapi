@@ -7,9 +7,12 @@ app = Flask(__name__)
 def index():
     return "Hello World!"
     '''
+
 from flask import Flask, jsonify
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app, origins="https://apex.oracle.com")  
 
 @app.route('/')
 def index():
@@ -19,16 +22,9 @@ def index():
 def run_dead_reckoning():
     try:
         result = "Dead reckoning process completed."
-        your_data = {'status': 'success', 'message': result}
-        
-        response = jsonify(your_data)
-        response.headers['Content-Type'] = 'application/json'
-        
-        return response  
-    
+        return jsonify({'status': 'success', 'message': result}), 200
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 if __name__ == "__main__":
     app.run(debug=True)
-
