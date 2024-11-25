@@ -25,7 +25,10 @@ def run_dead_reckoning():
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
         '''
-    return "API"
+    your_data = 'API'
+    response = jsonify(your_data)
+    response.headers['Content-Type'] = 'application/json'
+return response
 
 if __name__ == "__main__":
     app.run(debug=True)
