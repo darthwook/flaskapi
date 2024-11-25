@@ -16,40 +16,34 @@ import matplotlib.image as mpimg
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
-from flask import Flask, jsonify, request
-import numpy as np
-import math
 from flask import Flask, jsonify
-import requests
-
-from flask import Flask
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app, origins="https://apex.oracle.com")  # Allow CORS from Oracle APEX
 
-@app.route("/")
+@app.route('/')
 def index():
-    return "Hello World!"
+    return "Hello World."
 
-'''
-app = Flask(__name__)
-
-@app.route('/', methods=['POST'])
+@app.route('/run_dead_reckoning', methods=['GET'])
 def run_dead_reckoning():
     try:
-        # Trigger your existing script's functionality here
-        steps = np.max(cACC.compute(display_graph=0, without_mean=1))  # example call
-        dist = steps * 0.69
-        make_target_with_image(steps, dist, display_steps=1, display_direction=0, display_stepsNumber=0)
+        steps = np.max(cACC.compute(display_graph=0, without_mean=1))  
+        dist = steps * 0.69  
         
-        return jsonify({"status": "success", "message": "Dead Reckoning script executed successfully!"}), 200
+        make_target_with_image(steps,
+                               dist,
+                               display_steps=1,
+                               display_direction=0,
+                               display_stepsNumber=0)
+        
+        return jsonify({'status': 'success'}), 200
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
-        
-import os
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))  # Default to 5000 if $PORT is not set
-    app.run(host="0.0.0.0", port=port, debug=True)
-    
+    app.run(debug=True)
 
 DATA_PATH = 'C:/kafka_python/.venv/DeadReckoning/.venv/data/' #'./data/'
 GRAPH_PATH = 'C:/kafka_python/.venv/DeadReckoning/.venv/graphs/'
@@ -97,9 +91,9 @@ def fetch_db(url):
         return pd.DataFrame()  # Return empty DataFrame on failure
 
 # Oracle APEX REST API URLs
-gyro_url = "https://apex.oracle.com/pls/apex/isha1/tables/gyro/?limit=1000"
-accel_url = "https://apex.oracle.com/pls/apex/isha1/tables/accel/?limit=1000"
-mag_url = "https://apex.oracle.com/pls/apex/isha1/tables/magneto/?limit=1000"
+gyro_url = "https://apex.oracle.com/pls/apex/isha1/tables/gyro"
+accel_url = "https://apex.oracle.com/pls/apex/isha1/tables/accel"
+mag_url = "https://apex.oracle.com/pls/apex/isha1/tables/magneto"
 
 # Fetch data for gyro, accel, and magnetometer
 gyro_data = fetch_db(gyro_url)
@@ -141,8 +135,8 @@ phone_mag_filtered = np.array([lp.butter_lowpass_filter(mag_data["mag_x"], cutof
 
 # Timestamp for Magnetometer
 timestamp = mag_data["mag_time"]
-trolley = np.array(accel_data['trolley_id'])
 
+trolley = np.array(accel_data['trolley_id'])
 
 pitch = gyro_data["x"]
 roll  = gyro_data["y"]
@@ -233,8 +227,6 @@ def draw_all_arrows(data_x, data_y, data_angles, r=1):
 def compute_avg(data_x, data_y, steps):
     Hx_avg = []
     Hy_avg = []
-    print('data x: ', data_x)
-    print('steps: ', steps)
     
     if steps <= 0:
         raise ValueError("The number of steps must be greater than zero.")
@@ -257,8 +249,6 @@ def make_graph_points():
     dataCompass2 = compute_compass2(Hx,Hy)
     #dataAcc = pull_data(DATA_PATH,'Accelerometer')[3] 
     dataAcc = fetch_db(accel_url)[3]
-
-    print(dataAcc)
     timestamps = mag_data["time"]
     plt.plot(timestamps, dataAcc, marker='.', label=" steps")
     draw_all_arrows(timestamps, dataAcc, dataCompass2, 0.1)
@@ -361,7 +351,7 @@ import time
 import requests
 import json
 
-def save_coord(steps_data, trolley_id):
+def save_coord(steps_data):
 
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36",
@@ -378,12 +368,11 @@ def save_coord(steps_data, trolley_id):
         steps = int(np.max(cACC.compute(display_graph=0, without_mean=1)))  
         trolley_id = data['trolley_id']
 
-        # Ensure numpy types are converted to native Python types
         coordinates.append({
-            "x": x,
-            "y": y,
-            "timestamp": timestamp,
-            "trolley_id": int(trolley_id),
+            "x": int(x),
+            "y": int(y),
+            "timestamp": int(timestamp),
+            "trolley_id": int(trolley_id),  
             "steps": int(steps)  
         })
 
@@ -391,7 +380,7 @@ def save_coord(steps_data, trolley_id):
         "coordinates": coordinates
     }
 
-    print('Payload:', payload)
+    print('Payload:', json.dumps(payload, indent=2))  
 
     # Send the data as a JSON POST request to the API
     try:
@@ -408,22 +397,19 @@ def save_coord(steps_data, trolley_id):
     except requests.exceptions.RequestException as e:
         print(f"Request failed: {e}")
 
-
-
 def calculate_steps_and_save(trolley, data_angles, x0=0, y0=0, r=1.5): 
     coordinates = []
-    coordinates.append({'timestamp': time.time(), 'x': x0, 'y': y0, 'trolley_id': trolley[0]})  # assuming trolley is a list/array
+    coordinates.append({'timestamp': time.time(), 'x': x0, 'y': y0, 'trolley_id': trolley[0]}) 
 
     # Calculate coordinates for each step and record them
     x, y = x0, y0
     for i in range(len(data_angles)):
         x, y = calculate_new_coordinates(x, y, data_angles[i], r)
-        trolley_id = trolley[i]  # Fetch the trolley_id dynamically for each step
+        trolley_id = trolley[i] 
         # Store coordinates for each step
         coordinates.append({'timestamp': time.time(), 'x': x, 'y': y, 'trolley_id': trolley_id})
     
-    # Call save_coord function to send coordinates to the API
-    save_coord(coordinates, trolley)
+    save_coord(coordinates)
 
 def calculate_new_coordinates(x, y, angle, r=1):
     return (x + r * math.sin(angle), y + r * math.cos(angle))
@@ -436,18 +422,10 @@ def make_target_with_image(nbr_steps, distance_traveled, display_steps=1, displa
     dataCompass2 = compute_compass2(Hx, Hy)
 
     trolley = np.array(accel_data['trolley_id']) 
+
     calculate_steps_and_save(trolley, dataCompass2, x0=0, y0=0, r=1.5)
     
-    '''
-    # Draw the arrows and plot the graph over the image
-    draw_all_arrows_target(0, 0, dataCompass2, 1.5, display_steps, display_direction, display_stepsNumber)
-    
-    plt.legend()
-    plt.savefig(GRAPH_PATH + 'tracking_with_image')
-    plt.show()
-    '''
-
-
+'''
 if __name__ == "__main__":
     
     steps = np.max(cACC.compute(display_graph = 0, without_mean=1))
